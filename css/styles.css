@@ -7,6 +7,9 @@
   --card-bg: #ffffff;
   --border-radius: 12px;
   --spacing: 20px;
+  --card-width: 420px;
+  --card-height: 560px; /* 3:4比例，420px宽 × 560px高 */
+  --card-max-content-height: 420px; /* 内容区域最大高度 */
 }
 
 * {
@@ -102,6 +105,13 @@ label {
   font-size: 15px;
 }
 
+.label-hint {
+  font-size: 13px;
+  color: #888;
+  font-weight: normal;
+  margin-left: 5px;
+}
+
 input,
 textarea {
   width: 100%;
@@ -133,11 +143,20 @@ textarea {
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  z-index: 10; /* 确保预览区域在最上层 */
+}
+
+.preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  position: relative; /* 相对定位 */
 }
 
 .card {
-  width: 420px;
-  min-height: 560px;
+  width: var(--card-width);
+  height: var(--card-height);
   background: var(--card-bg);
   border-radius: 20px;
   padding: 30px;
@@ -146,6 +165,11 @@ textarea {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  aspect-ratio: 3/4; /* 保持3:4的比例 */
+  z-index: 20; /* 确保卡片在最上层 */
+  box-sizing: border-box; /* 确保padding包含在宽高内 */
+  visibility: visible; /* 确保卡片可见 */
+  opacity: 1; /* 确保卡片不透明 */
 }
 
 .card-background {
@@ -156,27 +180,43 @@ textarea {
   bottom: 0;
   z-index: 0;
   transition: all 0.3s ease;
+  visibility: visible; /* 确保背景可见 */
+  opacity: 1; /* 确保背景不透明 */
 }
 
 .card-content-wrapper {
   position: relative;
-  z-index: 1;
+  z-index: 5; /* 确保内容显示在背景之上 */
   background: rgba(255, 255, 255, 0.95);
-  padding: 25px;
+  padding: 20px; /* 减少内边距，提供更多内容空间 */
   border-radius: 16px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 防止内容溢出 */
+  box-sizing: border-box; /* 确保padding包含在宽高内 */
+  visibility: visible; /* 确保内容包装器可见 */
+  opacity: 1; /* 确保内容包装器不透明 */
+}
+
+.card-header {
+  margin-bottom: 15px;
+  position: relative;
+  z-index: 10;
 }
 
 .card-title {
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 600;
   color: #333;
-  margin-bottom: 20px;
   line-height: 1.4;
   position: relative;
   padding-left: 15px;
+  z-index: 10; /* 确保标题在最上层 */
+  margin-bottom: 2px;
+  letter-spacing: 0.02em;
 }
 
 .card-title::before {
@@ -186,32 +226,84 @@ textarea {
   top: 0;
   bottom: 0;
   width: 4px;
-  background: var(--card-theme, var(--primary));
+  background: var(--highlight-color, var(--primary));
   border-radius: 4px;
 }
 
 .card-content {
   color: #666;
-  line-height: 1.8;
-  font-size: 16px;
+  line-height: 1.7; /* 增加行高，从1.5到1.7，显著提高行间距 */
+  font-size: 17px; /* 增加字体大小从16px到17px */
+  letter-spacing: 0.03em; /* 添加更大的字间距 */
+  word-spacing: 0.06em; /* 添加更大的词间距 */
+  flex: 1;
+  overflow: hidden; /* 默认隐藏溢出内容，不显示滚动条 */
+  z-index: 10; /* 确保内容在最上层 */
+  position: relative; /* 相对定位 */
+  padding-right: 5px; /* 为滚动条留出空间 */
+  transition: opacity 0.2s ease; /* 添加淡入淡出效果 */
+  visibility: visible; /* 确保内容可见 */
+  opacity: 1; /* 确保内容不透明 */
 }
 
-/* 段落样式 */
+/* 自定义列表和段落间距 */
 .card-content p {
-  margin-bottom: 16px;
+  margin-bottom: 12px; /* 增加段落间距，从10px到12px */
   position: relative;
+  width: 100%; /* 确保段落宽度正确 */
+}
+
+.card-content p:last-child {
+  margin-bottom: 0; /* 移除最后一个段落的底部间距 */
+}
+
+/* 列表项样式 - 不再依赖custom-list */
+.custom-list-item {
+  margin-bottom: 12px; /* 与段落保持一致的间距 */
+  display: block;
+  width: 100%;
+  position: relative;
+  padding-left: 1.8em; /* 增加左侧填充，为emoji留出更多空间 */
+  margin-bottom: 0.4em; /* 列表项之间的间距 */
+}
+
+.custom-list-item:last-child {
+  margin-bottom: 12px; /* 与段落保持一致的底部间距 */
+}
+
+.custom-list-item::before {
+  content: attr(data-emoji);
+  position: absolute;
+  left: 0;
+  top: -0.05em; /* 微调emoji位置，使其与文本更好地对齐 */
+  font-size: 1em; /* 将emoji大小调整为与文本大小一致 */
+  line-height: 1.7; /* 匹配内容的行高 */
 }
 
 /* 关键词高亮 */
-.highlight {
-  color: var(--primary);
+.card-content .highlight {
+  color: var(--highlight-color, var(--primary));
   font-weight: 600;
+  border-radius: 3px;
+  padding: 2px 1px;
 }
 
 /* 重要段落强调 */
 .card-content p strong {
   background: linear-gradient(transparent 60%, rgba(255, 36, 66, 0.1) 40%);
   padding: 0 2px;
+  display: inline; /* 确保内联显示，不独占一行 */
+  white-space: normal; /* 允许正常换行 */
+  word-break: break-word; /* 允许在单词内换行，防止溢出 */
+  word-wrap: break-word; /* 确保长单词换行 */
+  font-weight: 600;
+  overflow-wrap: break-word; /* 处理长单词和表情符号 */
+}
+
+/* 处理表情符号在strong标签中的显示 */
+.card-content strong {
+  line-height: 1.5; /* 确保与段落行高一致 */
+  vertical-align: baseline; /* 对齐基线 */
 }
 
 /* 列表样式 */
@@ -307,13 +399,14 @@ textarea {
 
 /* 卡片页脚 */
 .card-footer {
-  margin-top: 20px;
-  padding-top: 15px;
+  padding-top: 10px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
   color: #666;
+  position: relative; /* 相对定位 */
+  z-index: 10; /* 确保页脚在最上层 */
 }
 
 .likes-comments {
@@ -534,12 +627,45 @@ textarea {
   --highlight-color: #333333;
 }
 
-/* 高亮文字样式 */
-.card-content .highlight {
-  color: var(--highlight-color);
-  font-weight: 600;
-  padding: 0 2px;
-  transition: color 0.3s ease;
+/* 纯文本容器样式 */
+.plain-text-container {
+  position: relative;
+  width: 100%;
+  margin-top: 15px;
+}
+
+#plainTextContent {
+  height: 120px;
+  background-color: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 12px;
+  white-space: pre-wrap;
+  font-family: "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  resize: vertical;
+  border-radius: 8px;
+}
+
+.copy-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  background: linear-gradient(45deg, #8a8a8a, #666);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  opacity: 0.7;
+  transition: opacity 0.3s, transform 0.2s;
+}
+
+.copy-btn:hover {
+  opacity: 1;
+  transform: translateY(-2px);
 }
 
 /* 响应式设计 */
@@ -549,26 +675,114 @@ textarea {
   }
   .preview-section {
     position: static;
+    margin-top: 30px;
+  }
+
+  .preview-container {
+    width: 100%;
+    max-width: 460px;
+    margin: 0 auto;
+  }
+
+  .card {
+    width: 100%;
+    height: auto;
+    min-height: 560px; /* 设置最小高度，确保比例一致 */
+    max-width: 420px; /* 限制最大宽度 */
+  }
+
+  .pagination-controls {
+    margin-top: 15px;
   }
 }
 
-.custom-list {
-  margin: 0;
-  padding: 0;
+/* 分页控制样式 */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  width: 100%;
+  padding: 5px 0;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 30px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  position: relative; /* 相对定位 */
+  z-index: 30; /* 确保分页控件在最上层 */
 }
 
-.custom-list-item {
-  position: relative;
-  padding-left: 1.6em;
-  margin-bottom: 0.5em;
+.page-btn {
+  background: linear-gradient(45deg, var(--primary), #ff6b6b);
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s ease;
+  margin: 0 10px;
 }
 
-.custom-list-item::before {
-  content: "✨";
-  position: absolute;
-  left: 0;
-  top: 0.1em;
-  font-size: 1.2em;
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #cccccc;
+}
+
+.page-btn:hover:not(:disabled) {
+  transform: scale(1.1);
+}
+
+#pageIndicator {
+  font-size: 14px;
+  color: var(--text);
+  margin: 0 10px;
+}
+
+#currentPage,
+#totalPages {
   font-weight: bold;
-  line-height: 1;
+  color: var(--primary);
+}
+
+/* 设置卡片内容不可见区域的样式 */
+.card-content-hidden {
+  display: none;
+}
+
+/* 导出模式下的样式 */
+.export-mode .card-content {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+/* 确保导出模式下内容包装器的padding不丢失 */
+.export-mode .card-content-wrapper {
+  padding-bottom: 20px !important;
+}
+
+/* 当内容可能需要滚动时的样式 */
+.scrollable .card-content {
+  overflow: auto; /* 允许滚动 */
+  scrollbar-width: thin; /* Firefox样式 */
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent; /* Firefox样式 */
+}
+
+/* 自定义滚动条样式 */
+.scrollable .card-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollable .card-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable .card-content::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
 }

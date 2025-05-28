@@ -54,6 +54,22 @@
 - 使用 emoji 让文章更生动"
           ></textarea>
         </div>
+
+        <div class="form-group">
+          <label
+            >纯文本版本
+            <span class="label-hint">(可直接复制到笔记APP)</span></label
+          >
+          <div class="plain-text-container">
+            <textarea
+              id="plainTextContent"
+              readonly
+              placeholder="生成内容后，此处将显示格式化的纯文本版本，可直接复制到其他应用..."
+            ></textarea>
+            <button class="copy-btn" onclick="copyPlainText()">复制文本</button>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>卡片风格</label>
           <div class="color-picker">
@@ -73,33 +89,44 @@
       </div>
 
       <div class="preview-section">
-        <div class="card" id="previewCard">
-          <div class="card-background gradient-bg-1"></div>
-          <div class="card-content-wrapper">
-            <div class="card-header">
-              <div class="card-title" id="previewTitle">
-                写下一个吸引人的标题...
+        <div class="preview-container">
+          <div class="card" id="previewCard">
+            <div class="card-background gradient-bg-1"></div>
+            <div class="card-content-wrapper">
+              <div class="card-header">
+                <div class="card-title" id="previewTitle">
+                  写下一个吸引人的标题...
+                </div>
+              </div>
+              <div class="card-content" id="previewContent">
+                <p>在这里分享你的见解和经验...</p>
+              </div>
+              <div class="card-footer">
+                <div class="likes-comments">
+                  <span class="footer-item">
+                    <span class="emoji heart">❤️</span>
+                    <span>1.2k</span>
+                  </span>
+                  <span class="footer-item">
+                    <span class="emoji comment">💭</span>
+                    <span>328</span>
+                  </span>
+                </div>
+                <span class="footer-item">
+                  <span class="emoji bookmark">🔥</span>
+                  <span>收藏 2.8k</span>
+                </span>
               </div>
             </div>
-            <div class="card-content" id="previewContent">
-              <p>在这里分享你的见解和经验...</p>
-            </div>
-            <div class="card-footer">
-              <div class="likes-comments">
-                <span class="footer-item">
-                  <span class="emoji heart">❤️</span>
-                  <span>1.2k</span>
-                </span>
-                <span class="footer-item">
-                  <span class="emoji comment">💭</span>
-                  <span>328</span>
-                </span>
-              </div>
-              <span class="footer-item">
-                <span class="emoji bookmark">🔥</span>
-                <span>收藏 2.8k</span>
-              </span>
-            </div>
+          </div>
+
+          <div class="pagination-controls">
+            <button id="prevPage" class="page-btn" disabled>&lt;</button>
+            <span id="pageIndicator"
+              >第 <span id="currentPage">1</span>/<span id="totalPages">1</span>
+              页</span
+            >
+            <button id="nextPage" class="page-btn">&gt;</button>
           </div>
         </div>
       </div>
