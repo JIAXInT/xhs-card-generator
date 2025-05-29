@@ -1050,6 +1050,12 @@ textarea {
   overflow: hidden;
 }
 
+/* 强制确保内容包装器有白色背景 */
+.card-content-wrapper {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
   .modal-container {

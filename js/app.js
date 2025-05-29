@@ -854,7 +854,6 @@ async function downloadSingleCard(card, width, height) {
     tempContainer.style.left = "0";
     tempContainer.style.zIndex = "-9999"; // 确保在所有内容后方
     tempContainer.style.pointerEvents = "none"; // 确保容器不会捕获鼠标事件
-    tempContainer.style.visibility = "hidden"; // 视觉上隐藏，但html2canvas仍能渲染
     document.body.appendChild(tempContainer);
 
     // 创建一个带背景的容器
@@ -866,8 +865,6 @@ async function downloadSingleCard(card, width, height) {
     imageContainer.style.display = "flex";
     imageContainer.style.alignItems = "center";
     imageContainer.style.justifyContent = "center";
-    imageContainer.style.visibility = "visible"; // 确保容器可见，以便html2canvas可以捕获
-    imageContainer.style.opacity = "1"; // 确保容器不透明
     tempContainer.appendChild(imageContainer);
 
     // 克隆卡片
@@ -875,57 +872,35 @@ async function downloadSingleCard(card, width, height) {
     clonedCard.style.transform = "none";
     clonedCard.style.width = width + "px";
     clonedCard.style.height = height + "px";
-    clonedCard.style.visibility = "visible"; // 确保卡片可见
-    clonedCard.style.opacity = "1"; // 确保卡片不透明
 
-    // 确保内容区域的内容可见
+    // 找到内容包装器并强制设置白色背景
     const contentWrapper = clonedCard.querySelector(".card-content-wrapper");
     if (contentWrapper) {
-      contentWrapper.style.opacity = "1";
-      contentWrapper.style.visibility = "visible";
+      // 添加内联样式
       contentWrapper.style.backgroundColor = "#ffffff";
       contentWrapper.style.background = "#ffffff";
-      contentWrapper.style.padding = "22px";
-      contentWrapper.style.overflow = "visible";
-      contentWrapper.style.height = "calc(var(--card-height) - 60px)";
-      contentWrapper.style.width = "calc(var(--card-width) - 60px)";
-      contentWrapper.style.margin = "0 auto";
-      contentWrapper.style.aspectRatio = "3/4";
-      contentWrapper.style.border = "1px solid rgba(255, 255, 255, 0.2)";
-      contentWrapper.style.borderRadius = "16px";
-    }
+      contentWrapper.style.borderRadius = "16px"; // 确保内容包装器有圆角
 
-    const contentElement = clonedCard.querySelector(".card-content");
-    if (contentElement) {
-      contentElement.style.opacity = "1";
-      contentElement.style.visibility = "visible";
-      contentElement.style.overflow = "visible";
-      contentElement.style.maxHeight = "none";
-      contentElement.style.height = "auto";
-      contentElement.style.wordBreak = "break-word";
-      contentElement.style.padding = "0";
+      // 创建一个白色背景div并插入到内容包装器内部的最前面
+      const whiteBackground = document.createElement("div");
+      whiteBackground.style.position = "absolute";
+      whiteBackground.style.top = "0";
+      whiteBackground.style.left = "0";
+      whiteBackground.style.width = "100%";
+      whiteBackground.style.height = "100%";
+      whiteBackground.style.backgroundColor = "#ffffff";
+      whiteBackground.style.zIndex = "1"; // 确保在内容之下
+      whiteBackground.style.borderRadius = "16px"; // 添加圆角，与内容包装器一致
 
-      // 确保所有子元素可见
-      const elements = contentElement.querySelectorAll("*");
-      elements.forEach((el) => {
-        el.style.visibility = "visible";
-        el.style.opacity = "1";
-        if (el.tagName.toLowerCase() === "span") {
-          el.style.display = "inline";
-        }
-        if (
-          el.tagName.toLowerCase() === "p" ||
-          el.classList.contains("custom-list-item") ||
-          el.tagName.toLowerCase() === "li"
-        ) {
-          el.style.width = "100%";
-          el.style.maxWidth = "100%";
-          el.style.wordWrap = "break-word";
-          el.style.overflowWrap = "break-word";
-          el.style.boxSizing = "border-box";
-          el.style.marginBottom = "14px";
-        }
-      });
+      // 将白色背景作为第一个子元素插入
+      contentWrapper.insertBefore(whiteBackground, contentWrapper.firstChild);
+
+      // 确保其他内容在白色背景之上
+      const contentChildren = contentWrapper.children;
+      for (let i = 1; i < contentChildren.length; i++) {
+        contentChildren[i].style.position = "relative";
+        contentChildren[i].style.zIndex = "2";
+      }
     }
 
     imageContainer.appendChild(clonedCard);
@@ -937,71 +912,44 @@ async function downloadSingleCard(card, width, height) {
     const canvas = await html2canvas(imageContainer, {
       scale: 2,
       useCORS: true,
-      logging: true, // 启用日志以便调试
+      logging: false,
       width: width,
       height: height,
       allowTaint: true,
-      backgroundColor: "#ffffff", // 设置明确的背景颜色
-      foreignObjectRendering: true, // 尝试使用foreignObject渲染
-      imageTimeout: 0,
+      backgroundColor: "#ffffff",
       onclone: function (clonedDoc) {
         // 在克隆的文档上执行操作，确保所有内容可见
         const clonedContainer = clonedDoc.querySelector(
           ".card-content-wrapper"
         );
         if (clonedContainer) {
-          clonedContainer.style.opacity = "1";
-          clonedContainer.style.visibility = "visible";
           clonedContainer.style.backgroundColor = "#ffffff";
           clonedContainer.style.background = "#ffffff";
-          clonedContainer.style.padding = "22px";
-          clonedContainer.style.overflow = "visible";
-          clonedContainer.style.height = "calc(var(--card-height) - 60px)";
-          clonedContainer.style.width = "calc(var(--card-width) - 60px)";
-          clonedContainer.style.margin = "0 auto";
-          clonedContainer.style.aspectRatio = "3/4";
-          clonedContainer.style.border = "1px solid rgba(255, 255, 255, 0.2)";
-          clonedContainer.style.borderRadius = "16px";
-        }
+          clonedContainer.style.borderRadius = "16px"; // 确保内容包装器有圆角
 
-        const clonedContent = clonedDoc.querySelector(".card-content");
-        if (clonedContent) {
-          clonedContent.style.opacity = "1";
-          clonedContent.style.visibility = "visible";
-          clonedContent.style.overflow = "visible";
-          clonedContent.style.maxHeight = "none";
-          clonedContent.style.height = "auto";
-          clonedContent.style.wordBreak = "break-word";
-          clonedContent.style.padding = "0";
+          // 创建一个白色背景div并插入到内容包装器内部的最前面
+          const whiteBackground = document.createElement("div");
+          whiteBackground.style.position = "absolute";
+          whiteBackground.style.top = "0";
+          whiteBackground.style.left = "0";
+          whiteBackground.style.width = "100%";
+          whiteBackground.style.height = "100%";
+          whiteBackground.style.backgroundColor = "#ffffff";
+          whiteBackground.style.zIndex = "1"; // 确保在内容之下
+          whiteBackground.style.borderRadius = "16px"; // 添加圆角，与内容包装器一致
 
-          // 确保所有子元素可见
-          const elements = clonedContent.querySelectorAll("*");
-          elements.forEach((el) => {
-            el.style.visibility = "visible";
-            el.style.opacity = "1";
-            if (el.tagName.toLowerCase() === "span") {
-              el.style.display = "inline";
-            }
-            if (
-              el.tagName.toLowerCase() === "p" ||
-              el.classList.contains("custom-list-item") ||
-              el.tagName.toLowerCase() === "li"
-            ) {
-              el.style.width = "100%";
-              el.style.maxWidth = "100%";
-              el.style.wordWrap = "break-word";
-              el.style.overflowWrap = "break-word";
-              el.style.boxSizing = "border-box";
-              el.style.marginBottom = "14px";
-            }
-          });
-        }
+          // 将白色背景作为第一个子元素插入
+          clonedContainer.insertBefore(
+            whiteBackground,
+            clonedContainer.firstChild
+          );
 
-        // 确保背景可见
-        const clonedBackground = clonedDoc.querySelector(".card-background");
-        if (clonedBackground) {
-          clonedBackground.style.opacity = "1";
-          clonedBackground.style.visibility = "visible";
+          // 确保其他内容在白色背景之上
+          const contentChildren = clonedContainer.children;
+          for (let i = 1; i < contentChildren.length; i++) {
+            contentChildren[i].style.position = "relative";
+            contentChildren[i].style.zIndex = "2";
+          }
         }
       },
     });
@@ -1033,6 +981,14 @@ async function downloadCard() {
   const originalHeight = card.style.height;
 
   try {
+    // 检查JSZip和FileSaver是否可用
+    if (
+      contentPages.length > 1 &&
+      (typeof JSZip === "undefined" || typeof saveAs === "undefined")
+    ) {
+      console.warn("JSZip或FileSaver库未加载，将使用单独下载模式");
+    }
+
     // 添加导出模式类，移除可滚动模式
     card.classList.add("export-mode");
     previewSection.classList.remove("scrollable");
@@ -1113,10 +1069,42 @@ async function downloadCard() {
         }
       }
 
-      // 所有图片生成完成后，开始下载
-      downloadBtn.textContent = "下载中...";
-      console.log("所有图片生成完成，开始下载...");
+      // 所有图片生成完成后，创建ZIP文件并下载
+      downloadBtn.textContent = "打包下载中...";
+      console.log("所有图片生成完成，开始创建ZIP文件...");
 
+      // 检查是否可以使用ZIP功能
+      if (typeof JSZip !== "undefined" && typeof saveAs !== "undefined") {
+        try {
+          // 创建一个新的JSZip实例
+          const zip = new JSZip();
+
+          // 将所有图片添加到ZIP文件中
+          for (let i = 0; i < imageUrls.length; i++) {
+            // 将base64图片URL转换为二进制数据
+            const imageData = await urlToBlob(imageUrls[i].url);
+            // 添加到zip
+            zip.file(imageUrls[i].filename, imageData);
+          }
+
+          // 生成ZIP文件
+          const zipContent = await zip.generateAsync({ type: "blob" });
+
+          // 使用FileSaver保存ZIP文件
+          saveAs(zipContent, `${fileNameBase}.zip`);
+
+          console.log("ZIP文件创建并下载成功");
+          return; // 成功后直接返回
+        } catch (error) {
+          console.error("创建ZIP文件失败:", error);
+          alert("创建ZIP文件失败，将尝试单独下载每张图片");
+        }
+      } else {
+        console.warn("JSZip或FileSaver库未加载，使用单独下载模式");
+      }
+
+      // 如果ZIP创建失败或不可用，退回到单独下载每张图片
+      downloadBtn.textContent = "下载中...";
       for (let i = 0; i < imageUrls.length; i++) {
         const link = document.createElement("a");
         link.download = imageUrls[i].filename;
@@ -1159,6 +1147,29 @@ async function downloadCard() {
     // 检查是否需要滚动模式
     checkIfScrollNeeded();
   }
+}
+
+// 将URL转换为Blob对象
+async function urlToBlob(url) {
+  // 从base64 URL提取数据部分
+  const base64Data = url.split(",")[1];
+  // 将base64转换为二进制
+  const byteCharacters = atob(base64Data);
+  const byteArrays = [];
+
+  for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+    const slice = byteCharacters.slice(offset, offset + 512);
+
+    const byteNumbers = new Array(slice.length);
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+
+    const byteArray = new Uint8Array(byteNumbers);
+    byteArrays.push(byteArray);
+  }
+
+  return new Blob(byteArrays, { type: "image/png" });
 }
 
 // 检查是否需要显示滚动条
