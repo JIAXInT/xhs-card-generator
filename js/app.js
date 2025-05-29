@@ -42,6 +42,47 @@ function getRandomTopic() {
   return topicTags[randomIndex];
 }
 
+// 解码嵌套的HTML实体编码
+function decodeNestedHtml(content) {
+  if (!content) return content;
+
+  // 先清理带有零宽空格的HTML实体编码
+  content = content.replace(/&[\u200B-\u200F\uFEFF]*lt;/g, "&lt;");
+  content = content.replace(/&[\u200B-\u200F\uFEFF]*gt;/g, "&gt;");
+  content = content.replace(/&[\u200B-\u200F\uFEFF]*amp;/g, "&amp;");
+  content = content.replace(/&[\u200B-\u200F\uFEFF]*quot;/g, "&quot;");
+  content = content.replace(/&[\u200B-\u200F\uFEFF]*#39;/g, "&#39;");
+
+  // 递归替换HTML实体编码，直到不再有变化
+  let previousContent = "";
+  let currentContent = content;
+
+  while (previousContent !== currentContent) {
+    previousContent = currentContent;
+
+    // 处理常见的HTML实体编码
+    currentContent = currentContent
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+
+    // 处理嵌套的strong和span标签的特殊情况
+    currentContent = currentContent
+      .replace(
+        /&lt;strong&gt;(.*?)&lt;span class="highlight"&gt;(.*?)&lt;\/span&gt;(.*?)&lt;\/strong&gt;/g,
+        '<strong>$1<span class="highlight">$2</span>$3</strong>'
+      )
+      .replace(
+        /&lt;span class="highlight"&gt;(.*?)&lt;\/span&gt;/g,
+        '<span class="highlight">$1</span>'
+      );
+  }
+
+  return currentContent;
+}
+
 // 处理内容中的 emoji 和标签
 function processContent(content) {
   if (!content) return "";
@@ -49,6 +90,41 @@ function processContent(content) {
   // 定义表情符号的正则表达式
   const emojiRegex =
     /([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F000}-\u{1F02F}]|[\u{1F0A0}-\u{1F0FF}]|[\u{1F100}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F910}-\u{1F96B}]|[\u{1F980}-\u{1F9E0}]|[❤️✨🔥💡])/gu;
+
+  // 清理带有零宽空格的HTML实体编码 - 处理类似&​​​lt;​​​​​​​​​​​​​​​strong&​​​gt;的问题
+  // 零宽空格Unicode: \u200B, \u200C, \u200D, \uFEFF等
+  content = content.replace(/&[\u200B-\u200F\uFEFF]*lt;/g, "&lt;"); // 替换所有带零宽空格的&lt;
+  content = content.replace(/&[\u200B-\u200F\uFEFF]*gt;/g, "&gt;"); // 替换所有带零宽空格的&gt;
+  content = content.replace(/&[\u200B-\u200F\uFEFF]*amp;/g, "&amp;"); // 替换所有带零宽空格的&amp;
+  content = content.replace(/&[\u200B-\u200F\uFEFF]*quot;/g, "&quot;"); // 替换所有带零宽空格的&quot;
+  content = content.replace(/&[\u200B-\u200F\uFEFF]*#39;/g, "&#39;"); // 替换所有带零宽空格的&#39;
+
+  // 清理标签名称中的零宽空格
+  content = content.replace(
+    /<[\u200B-\u200F\uFEFF]*([a-z]+)[\u200B-\u200F\uFEFF]*/gi,
+    "<$1"
+  );
+  content = content.replace(
+    /<\/[\u200B-\u200F\uFEFF]*([a-z]+)[\u200B-\u200F\uFEFF]*/gi,
+    "</$1"
+  );
+
+  // 清理属性名中的零宽空格
+  content = content.replace(/\s+class[\u200B-\u200F\uFEFF]*=/g, " class=");
+  content = content.replace(/\s+style[\u200B-\u200F\uFEFF]*=/g, " style=");
+  content = content.replace(/\s+id[\u200B-\u200F\uFEFF]*=/g, " id=");
+
+  // 移除所有<em>标签，保留内部内容
+  content = content.replace(/<em>(.*?)<\/em>/g, "$1");
+
+  // 移除可能嵌套或转义的<em>标签
+  content = content.replace(/&lt;em&gt;(.*?)&lt;\/em&gt;/g, "$1");
+
+  // 解码嵌套的HTML实体编码
+  content = decodeNestedHtml(content);
+
+  // 修复HTML标签嵌套错误
+  content = fixHtmlStructure(content);
 
   // 处理特殊符号和标签的问题
   // 1. 修复strong标签内部符号显示问题
@@ -102,7 +178,125 @@ function processContent(content) {
     "$1 $2"
   );
 
+  // 检测和修复内容中的乱码HTML标签
+  if (
+    content.match(/&[\u200B-\u200F\uFEFF]*[a-z]+;/i) ||
+    content.match(/<[\u200B-\u200F\uFEFF]*[a-z]+/i) ||
+    content.match(/[\u200B-\u200F\uFEFF]+/)
+  ) {
+    console.warn("检测到内容中含有零宽空格或乱码标签，正在修复...");
+
+    // 修复带零宽空格的HTML实体编码
+    content = content.replace(/&[\u200B-\u200F\uFEFF]*lt;/g, "&lt;");
+    content = content.replace(/&[\u200B-\u200F\uFEFF]*gt;/g, "&gt;");
+    content = content.replace(/&[\u200B-\u200F\uFEFF]*amp;/g, "&amp;");
+    content = content.replace(/&[\u200B-\u200F\uFEFF]*quot;/g, "&quot;");
+    content = content.replace(/&[\u200B-\u200F\uFEFF]*#39;/g, "&#39;");
+
+    // 清理标签名称中的零宽空格
+    content = content.replace(
+      /<[\u200B-\u200F\uFEFF]*([a-z]+)[\u200B-\u200F\uFEFF]*/gi,
+      "<$1"
+    );
+    content = content.replace(
+      /<\/[\u200B-\u200F\uFEFF]*([a-z]+)[\u200B-\u200F\uFEFF]*/gi,
+      "</$1"
+    );
+
+    // 清理属性名中的零宽空格
+    content = content.replace(/\s+class[\u200B-\u200F\uFEFF]*=/g, " class=");
+  }
+
   return content;
+}
+
+// 修复HTML结构的函数
+function fixHtmlStructure(content) {
+  if (!content) return content;
+
+  // 创建一个临时DOM元素来分析HTML
+  const tempElement = document.createElement("div");
+
+  try {
+    // 安全地设置HTML内容
+    tempElement.innerHTML = content;
+
+    // 1. 修复p标签内的ul标签嵌套问题
+    const paragraphs = tempElement.querySelectorAll("p");
+    paragraphs.forEach((p) => {
+      const ulElements = p.querySelectorAll("ul");
+      if (ulElements.length > 0) {
+        // 获取p标签的父元素
+        const parent = p.parentNode;
+
+        // 分割内容：p开始到ul之前，ul内容，ul之后到p结束
+        const pContent = p.innerHTML;
+        const ulStart = pContent.indexOf("<ul");
+        const ulEnd = pContent.lastIndexOf("</ul>") + 5;
+
+        if (ulStart > 0 && ulEnd > ulStart) {
+          const beforeUl = pContent.substring(0, ulStart);
+          const ulContent = pContent.substring(ulStart, ulEnd);
+          const afterUl = pContent.substring(ulEnd);
+
+          // 创建新元素
+          const newP1 = document.createElement("p");
+          newP1.innerHTML = beforeUl;
+
+          const tempUlContainer = document.createElement("div");
+          tempUlContainer.innerHTML = ulContent;
+          const newUl = tempUlContainer.firstChild;
+
+          const newP2 = document.createElement("p");
+          newP2.innerHTML = afterUl;
+
+          // 替换原始p标签
+          if (beforeUl.trim()) {
+            parent.insertBefore(newP1, p);
+          }
+
+          if (tempUlContainer.firstChild) {
+            parent.insertBefore(newUl, p);
+          }
+
+          if (afterUl.trim()) {
+            parent.insertBefore(newP2, p);
+          }
+
+          // 移除原始p标签
+          parent.removeChild(p);
+        }
+      }
+    });
+
+    // 2. 修复内联元素内的块级元素嵌套问题
+    const inlineElements = tempElement.querySelectorAll("strong, span");
+    inlineElements.forEach((inlineEl) => {
+      // 检查是否有块级元素嵌套
+      const blockElements = inlineEl.querySelectorAll(
+        "p, ul, li, div, h1, h2, h3, h4, h5, h6"
+      );
+      if (blockElements.length > 0) {
+        // 获取内联元素的父元素
+        const parent = inlineEl.parentNode;
+
+        // 将内联元素的内容移到它前面
+        const inlineContent = inlineEl.innerHTML;
+        const tempContainer = document.createElement("div");
+        tempContainer.innerHTML = inlineContent;
+
+        // 移除内联元素
+        parent.insertBefore(tempContainer, inlineEl);
+        parent.removeChild(inlineEl);
+      }
+    });
+
+    // 返回修复后的HTML
+    return tempElement.innerHTML;
+  } catch (e) {
+    console.error("修复HTML结构时出错:", e);
+    return content; // 出错时返回原始内容
+  }
 }
 
 // 分页处理内容
@@ -219,7 +413,11 @@ function paginateContent(content) {
       footerHeight) *
     0.95; // 添加0.95的容量系数，避免内容过满
 
+  // 允许的最大扩展高度 - 卡片最多可增加20%高度
+  const maxExtendedHeight = availableHeight * 1.2;
+
   console.log(`卡片可用高度: ${availableHeight}px`);
+  console.log(`卡片最大扩展高度: ${maxExtendedHeight}px`);
 
   // 测量每个元素的高度
   const elementHeights = [];
@@ -241,6 +439,41 @@ function paginateContent(content) {
       }px)`
     );
   });
+
+  // 计算所有元素的总高度
+  const totalContentHeight = elementHeights.reduce(
+    (sum, el) => sum + el.withMargin,
+    0
+  );
+
+  console.log(`内容总高度: ${totalContentHeight}px`);
+
+  // 如果内容总高度在最大扩展高度范围内，则不分页
+  if (totalContentHeight <= maxExtendedHeight) {
+    console.log(
+      `内容总高度在可接受范围内 (${totalContentHeight}px <= ${maxExtendedHeight}px)，不分页`
+    );
+
+    // 设置卡片自适应高度的标记
+    const card = document.getElementById("previewCard");
+    if (totalContentHeight > availableHeight) {
+      card.setAttribute("data-extended-height", "true");
+      card.style.height = `${
+        cardHeight * (totalContentHeight / availableHeight)
+      }px`;
+      console.log(
+        `设置卡片高度为: ${
+          cardHeight * (totalContentHeight / availableHeight)
+        }px`
+      );
+    } else {
+      card.removeAttribute("data-extended-height");
+      card.style.height = "";
+    }
+
+    document.body.removeChild(measureContainer);
+    return [contentElements.map((el) => el.html).join("")];
+  }
 
   // 分页算法
   const pages = [];
@@ -294,202 +527,12 @@ function paginateContent(content) {
     console.log(`第 ${i + 1} 页内容长度: ${page.length}`);
   });
 
+  // 重置卡片高度
+  const card = document.getElementById("previewCard");
+  card.removeAttribute("data-extended-height");
+  card.style.height = "";
+
   return pages;
-}
-
-// 更新分页导航
-function updatePagination() {
-  const prevPageBtn = document.getElementById("prevPage");
-  const nextPageBtn = document.getElementById("nextPage");
-  const currentPageElement = document.getElementById("currentPage");
-  const totalPagesElement = document.getElementById("totalPages");
-  const paginationControls = document.querySelector(".pagination-controls");
-
-  // 更新页码显示
-  currentPageElement.textContent = currentPageIndex + 1;
-  totalPagesElement.textContent = contentPages.length;
-
-  console.log(
-    `更新分页导航: 当前页 ${currentPageIndex + 1}/${contentPages.length}`
-  );
-
-  // 更新按钮状态
-  prevPageBtn.disabled = currentPageIndex === 0;
-  nextPageBtn.disabled = currentPageIndex >= contentPages.length - 1;
-
-  // 显示或隐藏分页控件
-  if (contentPages.length > 1) {
-    paginationControls.style.display = "flex";
-    console.log(`显示分页导航，共 ${contentPages.length} 页`);
-
-    // 记录所有页面内容长度，帮助调试
-    for (let i = 0; i < contentPages.length; i++) {
-      console.log(`第 ${i + 1} 页内容长度: ${contentPages[i].length}`);
-    }
-  } else {
-    paginationControls.style.display = "none";
-    console.log("隐藏分页导航");
-  }
-}
-
-// 显示指定页的内容
-function showPage(pageIndex) {
-  if (pageIndex < 0 || pageIndex >= contentPages.length) {
-    console.error(`页码无效: ${pageIndex + 1}/${contentPages.length}`);
-    return;
-  }
-
-  currentPageIndex = pageIndex;
-
-  console.log(`显示第 ${pageIndex + 1}/${contentPages.length} 页`);
-
-  // 使用淡入淡出效果
-  const contentElement = document.getElementById("previewContent");
-
-  // 淡出当前内容
-  contentElement.style.opacity = "0";
-
-  // 等待淡出动画完成后更新内容
-  setTimeout(() => {
-    // 确保之前的内容完全清除
-    contentElement.innerHTML = "";
-
-    // 检查内容是否存在
-    if (!contentPages[pageIndex] || contentPages[pageIndex].trim() === "") {
-      contentElement.innerHTML = "<p>此页内容为空</p>";
-      console.error(`第 ${pageIndex + 1} 页内容为空`);
-    } else {
-      // 设置新内容
-      contentElement.innerHTML = contentPages[pageIndex];
-      console.log(
-        `已设置第 ${pageIndex + 1} 页内容，长度: ${
-          contentPages[pageIndex].length
-        }`
-      );
-    }
-
-    // 在预览模式下禁用滚动条
-    contentElement.style.overflow = "hidden";
-
-    // 应用自定义列表样式
-    const emojiList = [
-      "✨",
-      "🌟",
-      "👉",
-      "✅",
-      "🔸",
-      "💡",
-      "📝",
-      "📌",
-      "🎯",
-      "🚀",
-    ];
-    const randomEmoji = emojiList[Math.floor(Math.random() * emojiList.length)];
-
-    // 确保所有的.custom-list-item都被正确设置emoji
-    document.querySelectorAll(".custom-list-item").forEach((item) => {
-      if (!item.hasAttribute("data-emoji")) {
-        item.setAttribute("data-emoji", randomEmoji);
-      }
-    });
-
-    // 确保内容区域滚动到顶部
-    contentElement.scrollTop = 0;
-
-    // 确保所有内容元素可见
-    const elements = contentElement.querySelectorAll(
-      "p, .custom-list-item, strong, span"
-    );
-
-    elements.forEach((el) => {
-      el.style.visibility = "visible";
-      el.style.opacity = "1";
-
-      // 根据元素类型设置合适的显示方式
-      if (el.tagName.toLowerCase() === "span") {
-        el.style.display = "inline";
-      } else if (el.classList.contains("custom-list-item")) {
-        el.style.display = "block";
-        el.style.position = "relative";
-        el.style.paddingLeft = "1.6em";
-        el.style.marginBottom = "0.3em";
-      } else if (el.tagName.toLowerCase() === "strong") {
-        // 确保strong标签显示为inline并允许换行
-        el.style.display = "inline";
-        el.style.whiteSpace = "normal"; // 允许换行
-
-        // 只对非表情符号添加零宽空格，保留表情符号原貌
-        if (!el.hasAttribute("data-processed")) {
-          const text = el.textContent;
-
-          // 定义表情符号的正则表达式
-          const emojiRegex =
-            /([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F000}-\u{1F02F}]|[\u{1F0A0}-\u{1F0FF}]|[\u{1F100}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F910}-\u{1F96B}]|[\u{1F980}-\u{1F9E0}]|[❤️✨🔥💡])/gu;
-
-          // 将文本拆分为表情符号和非表情符号部分
-          let lastIndex = 0;
-          let parts = [];
-          let match;
-
-          // 收集所有表情符号位置
-          while ((match = emojiRegex.exec(text)) !== null) {
-            // 添加表情符号前的文本（添加零宽空格）
-            if (match.index > lastIndex) {
-              const beforeText = text.substring(lastIndex, match.index);
-              parts.push(beforeText.replace(/([^\w\s])/g, "$1\u200B"));
-            }
-
-            // 添加表情符号本身（不加零宽空格）
-            parts.push(match[0]);
-
-            lastIndex = match.index + match[0].length;
-          }
-
-          // 添加最后一部分文本
-          if (lastIndex < text.length) {
-            const remainingText = text.substring(lastIndex);
-            parts.push(remainingText.replace(/([^\w\s])/g, "$1\u200B"));
-          }
-
-          // 设置新的文本内容
-          el.textContent = parts.join("");
-          el.setAttribute("data-processed", "true");
-        }
-      } else {
-        el.style.display = "block";
-      }
-    });
-
-    // 智能调整内容以填满卡片
-    adaptContentToFillPage(contentElement);
-
-    // 确保高亮元素使用正确的主题颜色
-    const card = document.getElementById("previewCard");
-    const computedStyle = getComputedStyle(card);
-    const highlightColor = computedStyle
-      .getPropertyValue("--highlight-color")
-      .trim();
-
-    // 更新卡片内的高亮元素颜色
-    const highlightElements = contentElement.querySelectorAll(".highlight");
-    highlightElements.forEach((el) => {
-      el.style.color = highlightColor;
-    });
-
-    // 淡入新内容
-    contentElement.style.opacity = "1";
-
-    // 更新分页导航
-    updatePagination();
-
-    // 确保分页导航可见（如果有多页）
-    const paginationControls = document.querySelector(".pagination-controls");
-    if (contentPages.length > 1) {
-      paginationControls.style.display = "flex";
-    } else {
-      paginationControls.style.display = "none";
-    }
-  }, 200);
 }
 
 // 自适应内容填充整个页面
@@ -498,10 +541,18 @@ function adaptContentToFillPage(contentElement) {
   const cardContent = contentElement;
   const contentHeight = cardContent.scrollHeight;
   const cardHeight = cardContent.clientHeight;
+  const card = document.getElementById("previewCard");
 
   console.log(
     `适应内容填充: 内容高度 ${contentHeight}px, 容器高度 ${cardHeight}px`
   );
+
+  // 检查卡片是否处于扩展高度模式
+  const isExtendedMode = card.hasAttribute("data-extended-height");
+  if (isExtendedMode) {
+    console.log("卡片处于扩展高度模式，跳过内容调整");
+    return;
+  }
 
   // 只有当内容不需要滚动且高度小于卡片高度的90%时才调整
   if (contentHeight < cardHeight && contentHeight < cardHeight * 0.9) {
@@ -543,6 +594,74 @@ function adaptContentToFillPage(contentElement) {
   }
 }
 
+// 验证内容的合法性
+function validateContent(content) {
+  // 如果内容太短 - 降低长度限制
+  if (content.length < 30) {
+    return { valid: false, reason: "内容太短，请添加更多详细信息" };
+  }
+
+  // 移除乱码检查，减少误判
+  // const hasGibberish = /[\uFFFD\u{10FFFF}]|(\{\{|\}\})|(%\d\d)|(\\\w+)/.test(content);
+  // if (hasGibberish) {
+  //   return { valid: false, reason: "内容包含乱码或不支持的字符" };
+  // }
+
+  // 保留<em>标签检查，但只是作为警告
+  if (content.includes("<em>") || content.includes("</em>")) {
+    console.warn("内容使用了不推荐的<em>标签，将自动转换为<strong>标签");
+    // 不影响valid状态，只做警告
+  }
+
+  // 检查HTML标签是否匹配
+  const checkTagPairs = [
+    { open: "<p>", close: "</p>" },
+    { open: "<strong>", close: "</strong>" },
+    { open: "<span", close: "</span>" },
+    { open: "<ul>", close: "</ul>" },
+    { open: "<li>", close: "</li>" },
+  ];
+
+  let hasTagMismatch = false;
+  let mismatchDetails = "";
+
+  for (const pair of checkTagPairs) {
+    const openCount = (content.match(new RegExp(pair.open, "g")) || []).length;
+    const closeCount = (content.match(new RegExp(pair.close, "g")) || [])
+      .length;
+
+    if (openCount !== closeCount) {
+      mismatchDetails = `HTML标签不匹配: ${pair.open}(${openCount}个) 和 ${pair.close}(${closeCount}个)`;
+      hasTagMismatch = true;
+      break; // 只需要找到第一个不匹配的标签对
+    }
+  }
+
+  // 只在标签严重不匹配时才返回无效
+  if (hasTagMismatch && content.length < 200) {
+    return { valid: false, reason: mismatchDetails };
+  }
+
+  // 其他检查项改为警告和建议，不影响内容有效性
+  // 检查是否有内联元素中嵌套了块级元素
+  if (
+    content.match(/<strong[^>]*>[^<]*((<p>)|(<ul>)|(<li>))/i) ||
+    content.match(/<span[^>]*>[^<]*((<p>)|(<ul>)|(<li>))/i)
+  ) {
+    console.warn("检测到内联元素中嵌套了块级元素，将尝试自动修复");
+    // 允许内容通过，但记录警告
+  }
+
+  // 检查是否有p标签中嵌套了ul标签
+  if (content.match(/<p[^>]*>[^<]*<ul>/i)) {
+    console.warn("检测到p标签中嵌套了ul标签，将尝试自动修复");
+    // 允许内容通过，但记录警告
+  }
+
+  // 内容通过验证
+  return { valid: true };
+}
+
 // 更新预览函数
 function updatePreview() {
   const title = document.getElementById("titleInput").value;
@@ -553,7 +672,28 @@ function updatePreview() {
   // 检查内容是否为空
   if (!content || content.trim() === "") {
     content = "<p>在这里分享你的见解和经验...</p>";
+  } else {
+    // 先进行内容校验
+    const contentValidation = validateContent(content);
+    if (!contentValidation.valid) {
+      console.warn(`生成的内容校验失败: ${contentValidation.reason}`);
+      // 记录警告但不显示弹窗，让内容继续处理
+      // const warningMessage = `注意: ${contentValidation.reason}。内容已经过自动修复，但可能需要手动调整。`;
+      // setTimeout(() => {
+      //   alert(warningMessage);
+      // }, 500);
+    }
   }
+
+  // 修复可能被错误转义的HTML标签
+  content = content.replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  content = content.replace(/&amp;lt;/g, "<").replace(/&amp;gt;/g, ">");
+
+  // 移除所有<em>标签，保留内部内容
+  content = content.replace(/<em>(.*?)<\/em>/g, "$1");
+
+  // 移除可能嵌套或转义的<em>标签
+  content = content.replace(/&lt;em&gt;(.*?)&lt;\/em&gt;/g, "$1");
 
   // 替换ul>li为独立的div结构，不使用层级嵌套
   content = content.replace(
@@ -704,12 +844,193 @@ function updatePreview() {
   extractPlainText();
 }
 
+// 下载单张卡片（供下载卡片函数调用）
+async function downloadSingleCard(card, width, height) {
+  try {
+    // 创建一个临时容器，放在页面后方但不可见
+    const tempContainer = document.createElement("div");
+    tempContainer.style.position = "fixed";
+    tempContainer.style.top = "0";
+    tempContainer.style.left = "0";
+    tempContainer.style.zIndex = "-9999"; // 确保在所有内容后方
+    tempContainer.style.pointerEvents = "none"; // 确保容器不会捕获鼠标事件
+    tempContainer.style.visibility = "hidden"; // 视觉上隐藏，但html2canvas仍能渲染
+    document.body.appendChild(tempContainer);
+
+    // 创建一个带背景的容器
+    const imageContainer = document.createElement("div");
+    imageContainer.className = "image-generation-container";
+    imageContainer.style.width = width + "px";
+    imageContainer.style.height = height + "px";
+    imageContainer.style.backgroundColor = "#ffffff";
+    imageContainer.style.display = "flex";
+    imageContainer.style.alignItems = "center";
+    imageContainer.style.justifyContent = "center";
+    imageContainer.style.visibility = "visible"; // 确保容器可见，以便html2canvas可以捕获
+    imageContainer.style.opacity = "1"; // 确保容器不透明
+    tempContainer.appendChild(imageContainer);
+
+    // 克隆卡片
+    const clonedCard = card.cloneNode(true);
+    clonedCard.style.transform = "none";
+    clonedCard.style.width = width + "px";
+    clonedCard.style.height = height + "px";
+    clonedCard.style.visibility = "visible"; // 确保卡片可见
+    clonedCard.style.opacity = "1"; // 确保卡片不透明
+
+    // 确保内容区域的内容可见
+    const contentWrapper = clonedCard.querySelector(".card-content-wrapper");
+    if (contentWrapper) {
+      contentWrapper.style.opacity = "1";
+      contentWrapper.style.visibility = "visible";
+      contentWrapper.style.backgroundColor = "#ffffff";
+      contentWrapper.style.background = "#ffffff";
+      contentWrapper.style.padding = "22px";
+      contentWrapper.style.overflow = "visible";
+      contentWrapper.style.height = "calc(var(--card-height) - 60px)";
+      contentWrapper.style.width = "calc(var(--card-width) - 60px)";
+      contentWrapper.style.margin = "0 auto";
+      contentWrapper.style.aspectRatio = "3/4";
+      contentWrapper.style.border = "1px solid rgba(255, 255, 255, 0.2)";
+      contentWrapper.style.borderRadius = "16px";
+    }
+
+    const contentElement = clonedCard.querySelector(".card-content");
+    if (contentElement) {
+      contentElement.style.opacity = "1";
+      contentElement.style.visibility = "visible";
+      contentElement.style.overflow = "visible";
+      contentElement.style.maxHeight = "none";
+      contentElement.style.height = "auto";
+      contentElement.style.wordBreak = "break-word";
+      contentElement.style.padding = "0";
+
+      // 确保所有子元素可见
+      const elements = contentElement.querySelectorAll("*");
+      elements.forEach((el) => {
+        el.style.visibility = "visible";
+        el.style.opacity = "1";
+        if (el.tagName.toLowerCase() === "span") {
+          el.style.display = "inline";
+        }
+        if (
+          el.tagName.toLowerCase() === "p" ||
+          el.classList.contains("custom-list-item") ||
+          el.tagName.toLowerCase() === "li"
+        ) {
+          el.style.width = "100%";
+          el.style.maxWidth = "100%";
+          el.style.wordWrap = "break-word";
+          el.style.overflowWrap = "break-word";
+          el.style.boxSizing = "border-box";
+          el.style.marginBottom = "14px";
+        }
+      });
+    }
+
+    imageContainer.appendChild(clonedCard);
+
+    // 等待一会儿，确保DOM更新完成
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // 使用html2canvas捕获内容
+    const canvas = await html2canvas(imageContainer, {
+      scale: 2,
+      useCORS: true,
+      logging: true, // 启用日志以便调试
+      width: width,
+      height: height,
+      allowTaint: true,
+      backgroundColor: "#ffffff", // 设置明确的背景颜色
+      foreignObjectRendering: true, // 尝试使用foreignObject渲染
+      imageTimeout: 0,
+      onclone: function (clonedDoc) {
+        // 在克隆的文档上执行操作，确保所有内容可见
+        const clonedContainer = clonedDoc.querySelector(
+          ".card-content-wrapper"
+        );
+        if (clonedContainer) {
+          clonedContainer.style.opacity = "1";
+          clonedContainer.style.visibility = "visible";
+          clonedContainer.style.backgroundColor = "#ffffff";
+          clonedContainer.style.background = "#ffffff";
+          clonedContainer.style.padding = "22px";
+          clonedContainer.style.overflow = "visible";
+          clonedContainer.style.height = "calc(var(--card-height) - 60px)";
+          clonedContainer.style.width = "calc(var(--card-width) - 60px)";
+          clonedContainer.style.margin = "0 auto";
+          clonedContainer.style.aspectRatio = "3/4";
+          clonedContainer.style.border = "1px solid rgba(255, 255, 255, 0.2)";
+          clonedContainer.style.borderRadius = "16px";
+        }
+
+        const clonedContent = clonedDoc.querySelector(".card-content");
+        if (clonedContent) {
+          clonedContent.style.opacity = "1";
+          clonedContent.style.visibility = "visible";
+          clonedContent.style.overflow = "visible";
+          clonedContent.style.maxHeight = "none";
+          clonedContent.style.height = "auto";
+          clonedContent.style.wordBreak = "break-word";
+          clonedContent.style.padding = "0";
+
+          // 确保所有子元素可见
+          const elements = clonedContent.querySelectorAll("*");
+          elements.forEach((el) => {
+            el.style.visibility = "visible";
+            el.style.opacity = "1";
+            if (el.tagName.toLowerCase() === "span") {
+              el.style.display = "inline";
+            }
+            if (
+              el.tagName.toLowerCase() === "p" ||
+              el.classList.contains("custom-list-item") ||
+              el.tagName.toLowerCase() === "li"
+            ) {
+              el.style.width = "100%";
+              el.style.maxWidth = "100%";
+              el.style.wordWrap = "break-word";
+              el.style.overflowWrap = "break-word";
+              el.style.boxSizing = "border-box";
+              el.style.marginBottom = "14px";
+            }
+          });
+        }
+
+        // 确保背景可见
+        const clonedBackground = clonedDoc.querySelector(".card-background");
+        if (clonedBackground) {
+          clonedBackground.style.opacity = "1";
+          clonedBackground.style.visibility = "visible";
+        }
+      },
+    });
+
+    // 获取图片URL
+    const imageUrl = canvas.toDataURL("image/png", 1.0);
+
+    // 清理临时元素
+    document.body.removeChild(tempContainer);
+
+    // 返回图片URL，而不是直接下载
+    return imageUrl;
+  } catch (error) {
+    console.error("单页下载失败:", error);
+    alert("图片生成失败: " + error.message);
+    throw error;
+  }
+}
+
 // 下载卡片
 async function downloadCard() {
   const card = document.getElementById("previewCard");
   const cardContent = card.querySelector(".card-content");
   const originalPageIndex = currentPageIndex;
   const previewSection = document.querySelector(".preview-section");
+
+  // 保存卡片原始高度状态
+  const wasExtendedHeight = card.hasAttribute("data-extended-height");
+  const originalHeight = card.style.height;
 
   try {
     // 添加导出模式类，移除可滚动模式
@@ -721,141 +1042,6 @@ async function downloadCard() {
     const originalWidth = cardRect.width;
     const originalHeight = cardRect.height;
 
-    // 保存所有页面的图片URLs
-    const imageUrls = [];
-
-    // 如果只有一页，直接下载
-    if (contentPages.length === 1) {
-      await downloadSingleCard(card, originalWidth, originalHeight);
-      return;
-    }
-
-    // 显示下载进度提示
-    const downloadBtn = document.querySelector(".download-btn");
-    const originalBtnText = downloadBtn.textContent;
-    downloadBtn.textContent = `正在处理 (1/${contentPages.length})`;
-    downloadBtn.disabled = true;
-
-    // 循环处理每一页
-    for (let i = 0; i < contentPages.length; i++) {
-      // 更新进度提示
-      downloadBtn.textContent = `正在处理 (${i + 1}/${contentPages.length})`;
-
-      // 显示当前页
-      showPage(i);
-
-      // 等待一会儿，确保内容渲染完成
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // 创建一个带背景的容器
-      const container = document.createElement("div");
-      container.style.position = "fixed";
-      container.style.top = "0";
-      container.style.left = "0";
-      container.style.width = originalWidth + "px";
-      container.style.height = originalHeight + "px";
-      container.style.backgroundColor = "#ffffff";
-      container.style.zIndex = "-9999";
-      container.style.display = "flex";
-      container.style.alignItems = "center";
-      container.style.justifyContent = "center";
-      container.style.visibility = "visible"; // 确保容器可见
-      container.style.opacity = "1"; // 确保容器不透明
-
-      // 克隆卡片
-      const clonedCard = card.cloneNode(true);
-      clonedCard.style.transform = "none";
-      clonedCard.style.width = originalWidth + "px";
-      clonedCard.style.height = originalHeight + "px";
-      clonedCard.style.visibility = "visible"; // 确保卡片可见
-      clonedCard.style.opacity = "1"; // 确保卡片不透明
-      clonedCard.classList.add("export-mode"); // 添加导出模式类
-
-      // 确保内容区域的内容可见
-      const contentWrapper = clonedCard.querySelector(".card-content-wrapper");
-      if (contentWrapper) {
-        contentWrapper.style.opacity = "1";
-        contentWrapper.style.visibility = "visible";
-        // 确保padding被保留
-        contentWrapper.style.paddingBottom = "20px";
-      }
-
-      const contentElement = clonedCard.querySelector(".card-content");
-      if (contentElement) {
-        contentElement.style.opacity = "1";
-        contentElement.style.visibility = "visible";
-        // 确保滚动条不可见且内容全部可见
-        contentElement.style.overflow = "visible";
-        contentElement.style.maxHeight = "none";
-        contentElement.style.height = "auto";
-
-        // 确保所有子元素可见
-        const elements = contentElement.querySelectorAll("*");
-        elements.forEach((el) => {
-          el.style.visibility = "visible";
-          el.style.opacity = "1";
-          if (el.tagName.toLowerCase() === "span") {
-            el.style.display = "inline";
-          }
-        });
-      }
-
-      container.appendChild(clonedCard);
-      document.body.appendChild(container);
-
-      // 等待一会儿，确保DOM更新完成
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // 使用html2canvas捕获内容
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-        logging: true, // 开启日志以便调试
-        width: originalWidth,
-        height: originalHeight,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        onclone: function (clonedDoc) {
-          // 在克隆的文档上执行操作，确保所有内容可见
-          const clonedContainer = clonedDoc.querySelector(
-            ".card-content-wrapper"
-          );
-          if (clonedContainer) {
-            clonedContainer.style.opacity = "1";
-            clonedContainer.style.visibility = "visible";
-            // 确保padding被保留
-            clonedContainer.style.paddingBottom = "20px";
-          }
-
-          const clonedContent = clonedDoc.querySelector(".card-content");
-          if (clonedContent) {
-            clonedContent.style.opacity = "1";
-            clonedContent.style.visibility = "visible";
-            clonedContent.style.overflow = "visible";
-            clonedContent.style.maxHeight = "none";
-            clonedContent.style.height = "auto";
-
-            // 确保所有子元素可见
-            const elements = clonedContent.querySelectorAll("*");
-            elements.forEach((el) => {
-              el.style.visibility = "visible";
-              el.style.opacity = "1";
-              if (el.tagName.toLowerCase() === "span") {
-                el.style.display = "inline";
-              }
-            });
-          }
-        },
-      });
-
-      // 获取图片URL
-      const imageUrl = canvas.toDataURL("image/png", 1.0);
-      imageUrls.push(imageUrl);
-
-      // 清理临时元素
-      document.body.removeChild(container);
-    }
-
     // 创建文件名基础
     const fileNameBase =
       document
@@ -866,35 +1052,111 @@ async function downloadCard() {
         .replace(/_+/g, "_")
         .replace(/^_+|_+$/g, "") || "小红书卡片";
 
-    // 下载所有图片
-    for (let i = 0; i < imageUrls.length; i++) {
-      const link = document.createElement("a");
-      const pageNumber = contentPages.length > 1 ? `_第${i + 1}页` : "";
-      link.download = `${fileNameBase}${pageNumber}.png`;
-      link.href = imageUrls[i];
-      link.click();
+    // 禁用下载按钮，避免重复点击
+    const downloadBtn = document.querySelector(".download-btn");
+    const originalBtnText = downloadBtn.textContent;
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = "生成中...";
 
-      // 添加延迟，避免浏览器下载管理器出问题
-      if (i < imageUrls.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+    // 如果只有一页，直接下载
+    if (contentPages.length === 1) {
+      try {
+        console.log("开始生成单页卡片图片...");
+        const imageUrl = await downloadSingleCard(
+          card,
+          originalWidth,
+          originalHeight
+        );
+        console.log("图片生成成功，准备下载...");
+        const link = document.createElement("a");
+        link.download = `${fileNameBase}.png`;
+        link.href = imageUrl;
+        link.click();
+      } catch (error) {
+        console.error("单页图片生成失败:", error);
+        alert("图片生成失败，请重试");
+        throw error;
+      }
+    } else {
+      // 存储所有生成的图片URL
+      const imageUrls = [];
+
+      // 循环处理每一页，先生成所有图片
+      for (let i = 0; i < contentPages.length; i++) {
+        // 更新下载按钮文本
+        downloadBtn.textContent = `生成中 (${i + 1}/${contentPages.length})...`;
+
+        // 显示当前页
+        showPage(i);
+
+        // 等待一会儿，确保内容渲染完成
+        await new Promise((resolve) => setTimeout(resolve, 600));
+
+        try {
+          console.log(
+            `开始生成第 ${i + 1}/${contentPages.length} 页卡片图片...`
+          );
+          const imageUrl = await downloadSingleCard(
+            card,
+            originalWidth,
+            originalHeight
+          );
+          console.log(`第 ${i + 1} 页图片生成成功`);
+          imageUrls.push({
+            url: imageUrl,
+            filename: `${fileNameBase}_第${i + 1}页.png`,
+          });
+        } catch (error) {
+          console.error(`第 ${i + 1} 页图片生成失败:`, error);
+          alert(`第 ${i + 1} 页生成失败，请重试`);
+          throw error;
+        }
+      }
+
+      // 所有图片生成完成后，开始下载
+      downloadBtn.textContent = "下载中...";
+      console.log("所有图片生成完成，开始下载...");
+
+      for (let i = 0; i < imageUrls.length; i++) {
+        const link = document.createElement("a");
+        link.download = imageUrls[i].filename;
+        link.href = imageUrls[i].url;
+        link.click();
+
+        // 添加延迟，避免浏览器下载管理器出问题
+        if (i < imageUrls.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
       }
     }
+
+    console.log("所有图片生成和下载完成");
   } catch (error) {
     console.error("下载失败:", error);
     alert("卡片下载失败，请稍后重试！");
   } finally {
+    // 恢复下载按钮
+    const downloadBtn = document.querySelector(".download-btn");
+    downloadBtn.disabled = false;
+    downloadBtn.textContent = originalBtnText;
+
     // 移除导出模式类
     card.classList.remove("export-mode");
-
-    // 恢复按钮状态
-    const downloadBtn = document.querySelector(".download-btn");
-    downloadBtn.textContent = "保存卡片 ⬇️";
-    downloadBtn.disabled = false;
 
     // 恢复原始页面
     showPage(originalPageIndex);
 
-    // 根据内容多少决定是否需要滚动条
+    // 恢复原始高度状态
+    if (wasExtendedHeight) {
+      card.setAttribute("data-extended-height", "true");
+    } else {
+      card.removeAttribute("data-extended-height");
+    }
+    if (originalHeight) {
+      card.style.height = originalHeight;
+    }
+
+    // 检查是否需要滚动模式
     checkIfScrollNeeded();
   }
 }
@@ -903,147 +1165,22 @@ async function downloadCard() {
 function checkIfScrollNeeded() {
   const previewSection = document.querySelector(".preview-section");
   const contentElement = document.getElementById("previewContent");
+  const card = document.getElementById("previewCard");
+
+  // 如果卡片处于扩展高度模式，不显示滚动条
+  if (card.hasAttribute("data-extended-height")) {
+    previewSection.classList.remove("scrollable");
+    contentElement.style.overflow = "hidden";
+    console.log("卡片处于扩展高度模式，禁用滚动条");
+    return;
+  }
 
   if (contentElement.scrollHeight > contentElement.clientHeight) {
     previewSection.classList.add("scrollable");
+    console.log("内容超出高度，启用滚动条");
   } else {
     previewSection.classList.remove("scrollable");
-  }
-}
-
-// 下载单张卡片（供下载卡片函数调用）
-async function downloadSingleCard(card, width, height) {
-  // 添加导出模式类
-  card.classList.add("export-mode");
-  document.querySelector(".preview-section").classList.remove("scrollable");
-
-  // 创建一个带背景的容器
-  const container = document.createElement("div");
-  container.style.position = "fixed";
-  container.style.top = "0";
-  container.style.left = "0";
-  container.style.width = width + "px";
-  container.style.height = height + "px";
-  container.style.backgroundColor = "#ffffff";
-  container.style.zIndex = "-9999";
-  container.style.display = "flex";
-  container.style.alignItems = "center";
-  container.style.justifyContent = "center";
-  container.style.visibility = "visible"; // 确保容器可见
-  container.style.opacity = "1"; // 确保容器不透明
-
-  // 克隆卡片
-  const clonedCard = card.cloneNode(true);
-  clonedCard.style.transform = "none";
-  clonedCard.style.width = width + "px";
-  clonedCard.style.height = height + "px";
-  clonedCard.style.visibility = "visible"; // 确保卡片可见
-  clonedCard.style.opacity = "1"; // 确保卡片不透明
-  clonedCard.classList.add("export-mode"); // 添加导出模式类
-
-  // 确保内容区域的内容可见
-  const contentWrapper = clonedCard.querySelector(".card-content-wrapper");
-  if (contentWrapper) {
-    contentWrapper.style.opacity = "1";
-    contentWrapper.style.visibility = "visible";
-    // 确保padding被保留
-    contentWrapper.style.paddingBottom = "20px";
-  }
-
-  const contentElement = clonedCard.querySelector(".card-content");
-  if (contentElement) {
-    contentElement.style.opacity = "1";
-    contentElement.style.visibility = "visible";
-    // 确保滚动条不可见且内容全部可见
-    contentElement.style.overflow = "visible";
-    contentElement.style.maxHeight = "none";
-    contentElement.style.height = "auto";
-
-    // 确保所有子元素可见
-    const elements = contentElement.querySelectorAll("*");
-    elements.forEach((el) => {
-      el.style.visibility = "visible";
-      el.style.opacity = "1";
-      if (el.tagName.toLowerCase() === "span") {
-        el.style.display = "inline";
-      }
-    });
-  }
-
-  container.appendChild(clonedCard);
-  document.body.appendChild(container);
-
-  // 等待一会儿，确保DOM更新完成
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  try {
-    const canvas = await html2canvas(container, {
-      scale: 2,
-      useCORS: true,
-      logging: true, // 开启日志以便调试
-      width: width,
-      height: height,
-      allowTaint: true,
-      backgroundColor: "#ffffff",
-      onclone: function (clonedDoc) {
-        // 在克隆的文档上执行操作，确保所有内容可见
-        const clonedContainer = clonedDoc.querySelector(
-          ".card-content-wrapper"
-        );
-        if (clonedContainer) {
-          clonedContainer.style.opacity = "1";
-          clonedContainer.style.visibility = "visible";
-          // 确保padding被保留
-          clonedContainer.style.paddingBottom = "20px";
-        }
-
-        const clonedContent = clonedDoc.querySelector(".card-content");
-        if (clonedContent) {
-          clonedContent.style.opacity = "1";
-          clonedContent.style.visibility = "visible";
-          clonedContent.style.overflow = "visible";
-          clonedContent.style.maxHeight = "none";
-          clonedContent.style.height = "auto";
-
-          // 确保所有子元素可见
-          const elements = clonedContent.querySelectorAll("*");
-          elements.forEach((el) => {
-            el.style.visibility = "visible";
-            el.style.opacity = "1";
-            if (el.tagName.toLowerCase() === "span") {
-              el.style.display = "inline";
-            }
-          });
-        }
-      },
-    });
-
-    // 创建下载链接
-    const link = document.createElement("a");
-    const fileName =
-      document
-        .getElementById("titleInput")
-        .value.trim()
-        .replace(/[\\/:*?"<>|]/g, "")
-        .replace(/\s+/g, "_")
-        .replace(/_+/g, "_")
-        .replace(/^_+|_+$/g, "") || "小红书卡片";
-
-    link.download = `${fileName}.png`;
-    link.href = canvas.toDataURL("image/png", 1.0);
-    link.click();
-  } catch (error) {
-    console.error("下载失败:", error);
-    alert("卡片下载失败，请稍后重试！");
-  } finally {
-    // 清理临时元素
-    document.body.removeChild(container);
-
-    // 移除导出模式类
-    card.classList.remove("export-mode");
-
-    // 检查是否需要滚动条
-    checkIfScrollNeeded();
+    console.log("内容高度适中，禁用滚动条");
   }
 }
 
@@ -1093,6 +1230,32 @@ async function generateContent() {
       // 处理标题和内容
       const title = result.title.trim();
       let content = result.content.trim();
+
+      // 检测明显的不完整内容，如示例中的问题
+      if (
+        content.includes('<span class="</div') ||
+        content.length < 150 ||
+        (content.match(/<p/g) || []).length < 2
+      ) {
+        console.warn("API返回内容明显不完整，但将尝试自动修复");
+
+        // 尝试修复明显的问题
+        content = content.replace(
+          /<span class="<\/div/g,
+          '<span class="highlight">'
+        );
+
+        // 添加默认的结束标签，如果内容非常短，则补充内容
+        if (content.length < 150) {
+          content += `<p>想了解更多关于${topicInput}的内容，请继续关注更新！</p>`;
+        }
+      }
+
+      // 进行内容校验，但仅记录警告，不阻止显示
+      const contentValidation = validateContent(content);
+      if (!contentValidation.valid) {
+        console.warn(`生成的内容校验失败: ${contentValidation.reason}`);
+      }
 
       // 处理内容中的emoji和标签
       content = processContent(content);
@@ -1246,6 +1409,205 @@ function changeCardBackground(gradientClass) {
       option.classList.add("active");
     }
   });
+}
+
+// 更新分页导航
+function updatePagination() {
+  const prevPageBtn = document.getElementById("prevPage");
+  const nextPageBtn = document.getElementById("nextPage");
+  const currentPageElement = document.getElementById("currentPage");
+  const totalPagesElement = document.getElementById("totalPages");
+  const paginationControls = document.querySelector(".pagination-controls");
+
+  // 更新页码显示
+  currentPageElement.textContent = currentPageIndex + 1;
+  totalPagesElement.textContent = contentPages.length;
+
+  console.log(
+    `更新分页导航: 当前页 ${currentPageIndex + 1}/${contentPages.length}`
+  );
+
+  // 更新按钮状态
+  prevPageBtn.disabled = currentPageIndex === 0;
+  nextPageBtn.disabled = currentPageIndex >= contentPages.length - 1;
+
+  // 显示或隐藏分页控件
+  if (contentPages.length > 1) {
+    paginationControls.style.display = "flex";
+    console.log(`显示分页导航，共 ${contentPages.length} 页`);
+
+    // 记录所有页面内容长度，帮助调试
+    for (let i = 0; i < contentPages.length; i++) {
+      console.log(`第 ${i + 1} 页内容长度: ${contentPages[i].length}`);
+    }
+  } else {
+    paginationControls.style.display = "none";
+    console.log("隐藏分页导航");
+  }
+}
+
+// 显示指定页的内容
+function showPage(pageIndex) {
+  if (pageIndex < 0 || pageIndex >= contentPages.length) {
+    console.error(`页码无效: ${pageIndex + 1}/${contentPages.length}`);
+    return;
+  }
+
+  currentPageIndex = pageIndex;
+
+  console.log(`显示第 ${pageIndex + 1}/${contentPages.length} 页`);
+
+  // 使用淡入淡出效果
+  const contentElement = document.getElementById("previewContent");
+
+  // 淡出当前内容
+  contentElement.style.opacity = "0";
+
+  // 等待淡出动画完成后更新内容
+  setTimeout(() => {
+    // 确保之前的内容完全清除
+    contentElement.innerHTML = "";
+
+    // 检查内容是否存在
+    if (!contentPages[pageIndex] || contentPages[pageIndex].trim() === "") {
+      contentElement.innerHTML = "<p>此页内容为空</p>";
+      console.error(`第 ${pageIndex + 1} 页内容为空`);
+    } else {
+      // 获取内容并确保HTML标签正确解码
+      let pageContent = contentPages[pageIndex];
+      pageContent = decodeNestedHtml(pageContent);
+
+      // 设置新内容
+      contentElement.innerHTML = pageContent;
+      console.log(
+        `已设置第 ${pageIndex + 1} 页内容，长度: ${
+          contentPages[pageIndex].length
+        }`
+      );
+    }
+
+    // 在预览模式下禁用滚动条
+    contentElement.style.overflow = "hidden";
+
+    // 应用自定义列表样式
+    const emojiList = [
+      "✨",
+      "🌟",
+      "👉",
+      "✅",
+      "🔸",
+      "💡",
+      "📝",
+      "📌",
+      "🎯",
+      "🚀",
+    ];
+    const randomEmoji = emojiList[Math.floor(Math.random() * emojiList.length)];
+
+    // 确保所有的.custom-list-item都被正确设置emoji
+    document.querySelectorAll(".custom-list-item").forEach((item) => {
+      if (!item.hasAttribute("data-emoji")) {
+        item.setAttribute("data-emoji", randomEmoji);
+      }
+    });
+
+    // 确保内容区域滚动到顶部
+    contentElement.scrollTop = 0;
+
+    // 确保所有内容元素可见
+    const elements = contentElement.querySelectorAll(
+      "p, .custom-list-item, strong, span"
+    );
+
+    elements.forEach((el) => {
+      el.style.visibility = "visible";
+      el.style.opacity = "1";
+
+      // 根据元素类型设置合适的显示方式
+      if (el.tagName.toLowerCase() === "span") {
+        el.style.display = "inline";
+      } else if (el.classList.contains("custom-list-item")) {
+        el.style.display = "block";
+        el.style.position = "relative";
+        el.style.paddingLeft = "1.6em";
+        el.style.marginBottom = "0.3em";
+      } else if (el.tagName.toLowerCase() === "strong") {
+        // 确保strong标签显示为inline并允许换行
+        el.style.display = "inline";
+        el.style.whiteSpace = "normal"; // 允许换行
+
+        // 只对非表情符号添加零宽空格，保留表情符号原貌
+        if (!el.hasAttribute("data-processed")) {
+          const text = el.textContent;
+
+          // 定义表情符号的正则表达式
+          const emojiRegex =
+            /([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F000}-\u{1F02F}]|[\u{1F0A0}-\u{1F0FF}]|[\u{1F100}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F910}-\u{1F96B}]|[\u{1F980}-\u{1F9E0}]|[❤️✨🔥💡])/gu;
+
+          // 将文本拆分为表情符号和非表情符号部分
+          let lastIndex = 0;
+          let parts = [];
+          let match;
+
+          // 收集所有表情符号位置
+          while ((match = emojiRegex.exec(text)) !== null) {
+            // 添加表情符号前的文本（添加零宽空格）
+            if (match.index > lastIndex) {
+              const beforeText = text.substring(lastIndex, match.index);
+              parts.push(beforeText.replace(/([^\w\s])/g, "$1\u200B"));
+            }
+
+            // 添加表情符号本身（不加零宽空格）
+            parts.push(match[0]);
+
+            lastIndex = match.index + match[0].length;
+          }
+
+          // 添加最后一部分文本
+          if (lastIndex < text.length) {
+            const remainingText = text.substring(lastIndex);
+            parts.push(remainingText.replace(/([^\w\s])/g, "$1\u200B"));
+          }
+
+          // 设置新的文本内容
+          el.textContent = parts.join("");
+          el.setAttribute("data-processed", "true");
+        }
+      } else {
+        el.style.display = "block";
+      }
+    });
+
+    // 智能调整内容以填满卡片
+    adaptContentToFillPage(contentElement);
+
+    // 确保高亮元素使用正确的主题颜色
+    const card = document.getElementById("previewCard");
+    const computedStyle = getComputedStyle(card);
+    const highlightColor = computedStyle
+      .getPropertyValue("--highlight-color")
+      .trim();
+
+    // 更新卡片内的高亮元素颜色
+    const highlightElements = contentElement.querySelectorAll(".highlight");
+    highlightElements.forEach((el) => {
+      el.style.color = highlightColor;
+    });
+
+    // 淡入新内容
+    contentElement.style.opacity = "1";
+
+    // 更新分页导航
+    updatePagination();
+
+    // 确保分页导航可见（如果有多页）
+    const paginationControls = document.querySelector(".pagination-controls");
+    if (contentPages.length > 1) {
+      paginationControls.style.display = "flex";
+    } else {
+      paginationControls.style.display = "none";
+    }
+  }, 200);
 }
 
 // 初始化事件监听

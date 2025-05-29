@@ -156,20 +156,25 @@ textarea {
 
 .card {
   width: var(--card-width);
-  height: var(--card-height);
+  min-height: var(--card-height);
+  max-height: calc(var(--card-height) * 1.2); /* 允许卡片最多增加20%的高度 */
+  height: auto; /* 改为自动高度，根据内容自适应 */
   background: var(--card-bg);
   border-radius: 20px;
   padding: 30px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.1); /* 增强阴影效果 */
   margin: 0 auto;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  aspect-ratio: 3/4; /* 保持3:4的比例 */
   z-index: 20; /* 确保卡片在最上层 */
   box-sizing: border-box; /* 确保padding包含在宽高内 */
   visibility: visible; /* 确保卡片可见 */
   opacity: 1; /* 确保卡片不透明 */
+  display: flex; /* 使用弹性布局 */
+  flex-direction: column; /* 垂直排列子元素 */
+  align-items: center; /* 水平居中 */
 }
 
 .card-background {
@@ -182,33 +187,56 @@ textarea {
   transition: all 0.3s ease;
   visibility: visible; /* 确保背景可见 */
   opacity: 1; /* 确保背景不透明 */
+  background-size: 200% 200%; /* 增加背景尺寸，便于动画效果 */
+  animation: gradientMove 15s ease infinite; /* 添加渐变背景动画 */
+  height: 100%; /* 确保背景覆盖整个卡片高度 */
+  min-height: var(--card-height); /* 最小高度与卡片一致 */
+}
+
+/* 背景渐变动画 */
+@keyframes gradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .card-content-wrapper {
   position: relative;
   z-index: 5; /* 确保内容显示在背景之上 */
-  background: rgba(255, 255, 255, 0.95);
-  padding: 20px; /* 减少内边距，提供更多内容空间 */
+  background: #ffffff;
+  padding: 22px 22px 0 22px; /* 修改内边距，底部不需要内边距 */
   border-radius: 16px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  height: 100%;
+  min-height: calc(var(--card-height) - 60px); /* 最小高度 */
+  max-height: calc(var(--card-height) * 1.2 - 60px); /* 最大高度 */
+  height: auto; /* 自动调整高度 */
+  width: calc(var(--card-width) - 60px); /* 固定宽度，卡片宽度减去两倍padding */
+  margin: 0 auto; /* 居中显示 */
   display: flex;
   flex-direction: column;
   overflow: hidden; /* 防止内容溢出 */
   box-sizing: border-box; /* 确保padding包含在宽高内 */
   visibility: visible; /* 确保内容包装器可见 */
   opacity: 1; /* 确保内容包装器不透明 */
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.03) inset; /* 添加微妙的内阴影，增强立体感 */
+  flex: 1; /* 让内容容器自动填充卡片剩余空间 */
 }
 
 .card-header {
-  margin-bottom: 15px;
+  margin-bottom: 18px; /* 增加标题与内容之间的间距 */
   position: relative;
   z-index: 10;
 }
 
 .card-title {
-  font-size: 23px;
+  font-size: 24px; /* 增加标题字体大小 */
   font-weight: 600;
   color: #333;
   line-height: 1.4;
@@ -225,32 +253,44 @@ textarea {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 5px; /* 增加左侧装饰线宽度 */
   background: var(--highlight-color, var(--primary));
   border-radius: 4px;
 }
 
 .card-content {
   color: #666;
-  line-height: 1.7; /* 增加行高，从1.5到1.7，显著提高行间距 */
-  font-size: 17px; /* 增加字体大小从16px到17px */
-  letter-spacing: 0.03em; /* 添加更大的字间距 */
-  word-spacing: 0.06em; /* 添加更大的词间距 */
+  line-height: 1.7; /* 行高，使文本更加通透 */
+  font-size: 18px; /* 增加字体大小以提高可读性 */
+  letter-spacing: 0.02em; /* 减小字间距 */
+  word-spacing: 0.05em; /* 减小词间距 */
   flex: 1;
-  overflow: hidden; /* 默认隐藏溢出内容，不显示滚动条 */
+  overflow: auto; /* 允许内容溢出时滚动 */
   z-index: 10; /* 确保内容在最上层 */
   position: relative; /* 相对定位 */
   padding-right: 5px; /* 为滚动条留出空间 */
+  padding-left: 3px; /* 左侧也添加少量填充 */
   transition: opacity 0.2s ease; /* 添加淡入淡出效果 */
   visibility: visible; /* 确保内容可见 */
   opacity: 1; /* 确保内容不透明 */
+  text-align: left; /* 恢复左对齐文本 */
+  display: block; /* 改为块级显示，解决flex布局问题 */
+  width: 100%; /* 确保宽度100% */
+  padding-bottom: 10px; /* 减小底部内边距 */
+  max-height: calc(var(--card-height) - 120px); /* 调整内容区域最大高度 */
+}
+
+/* 在固定高度容器中垂直居中内容 */
+.card-content:only-child {
+  justify-content: center; /* 当只有一个子元素时居中显示 */
 }
 
 /* 自定义列表和段落间距 */
 .card-content p {
-  margin-bottom: 12px; /* 增加段落间距，从10px到12px */
+  margin-bottom: 10px; /* 增加段落间距，提供更好的视觉分隔 */
   position: relative;
   width: 100%; /* 确保段落宽度正确 */
+  text-align: left; /* 恢复左对齐文本 */
 }
 
 .card-content p:last-child {
@@ -259,25 +299,29 @@ textarea {
 
 /* 列表项样式 - 不再依赖custom-list */
 .custom-list-item {
-  margin-bottom: 12px; /* 与段落保持一致的间距 */
+  margin-bottom: 14px; /* 增加列表项间距 */
   display: block;
   width: 100%;
   position: relative;
-  padding-left: 1.8em; /* 增加左侧填充，为emoji留出更多空间 */
-  margin-bottom: 0.4em; /* 列表项之间的间距 */
+  padding-left: 2em; /* 增加左侧填充，为emoji留出更多空间 */
+  text-align: left; /* 恢复左对齐文本 */
+  box-sizing: border-box; /* 确保padding不影响总宽度 */
+  line-height: 1.5; /* 添加合适的行高 */
 }
 
 .custom-list-item:last-child {
-  margin-bottom: 12px; /* 与段落保持一致的底部间距 */
+  margin-bottom: 16px; /* 与段落保持一致的底部间距 */
 }
 
 .custom-list-item::before {
   content: attr(data-emoji);
   position: absolute;
   left: 0;
-  top: -0.05em; /* 微调emoji位置，使其与文本更好地对齐 */
-  font-size: 1em; /* 将emoji大小调整为与文本大小一致 */
-  line-height: 1.7; /* 匹配内容的行高 */
+  top: 0.05em; /* 调整emoji位置，使其与文本更好地对齐 */
+  font-size: 1.1em; /* 稍微增大emoji大小 */
+  line-height: 1.5; /* 匹配内容的行高 */
+  text-align: left; /* 确保emoji左对齐 */
+  width: 1.5em; /* 减小宽度，防止emoji间距过大 */
 }
 
 /* 关键词高亮 */
@@ -285,13 +329,27 @@ textarea {
   color: var(--highlight-color, var(--primary));
   font-weight: 600;
   border-radius: 3px;
-  padding: 2px 1px;
+  padding: 2px 3px; /* 增加水平内边距 */
+  margin: 0 1px; /* 添加少量外边距，使高亮文本更加突出 */
+  display: inline; /* 确保内联显示 */
+  white-space: normal; /* 允许正常换行 */
+}
+
+/* 导出模式下高亮样式 */
+.export-mode .card-content .highlight {
+  display: inline !important;
+  color: var(--highlight-color, var(--primary)) !important;
+  font-weight: 600 !important;
+  word-break: normal !important; /* 避免字符间断开 */
 }
 
 /* 重要段落强调 */
 .card-content p strong {
-  background: linear-gradient(transparent 60%, rgba(255, 36, 66, 0.1) 40%);
-  padding: 0 2px;
+  background: linear-gradient(
+    transparent 65%,
+    rgba(255, 36, 66, 0.12) 35%
+  ); /* 调整下划线效果 */
+  padding: 0 3px; /* 增加水平内边距 */
   display: inline; /* 确保内联显示，不独占一行 */
   white-space: normal; /* 允许正常换行 */
   word-break: break-word; /* 允许在单词内换行，防止溢出 */
@@ -300,10 +358,23 @@ textarea {
   overflow-wrap: break-word; /* 处理长单词和表情符号 */
 }
 
+/* 导出模式下强调文本样式 */
+.export-mode .card-content strong {
+  background: linear-gradient(
+    transparent 65%,
+    rgba(255, 36, 66, 0.12) 35%
+  ) !important;
+  display: inline !important;
+  white-space: normal !important;
+  word-break: normal !important; /* 避免字符间断开 */
+  font-weight: 600 !important;
+}
+
 /* 处理表情符号在strong标签中的显示 */
 .card-content strong {
-  line-height: 1.5; /* 确保与段落行高一致 */
+  line-height: 1.7; /* 确保与段落行高协调 */
   vertical-align: baseline; /* 对齐基线 */
+  font-size: 1.05em; /* 稍微增大加粗文本尺寸 */
 }
 
 /* 列表样式 */
@@ -311,22 +382,31 @@ textarea {
   list-style: none;
   padding-left: 0;
   margin-left: 0;
+  width: 100%; /* 确保列表占据全宽 */
+  text-align: left; /* 恢复左对齐文本 */
+  margin-bottom: 16px; /* 添加列表底部间距 */
+  margin-top: 4px; /* 添加列表顶部间距 */
 }
 
 .card-content li {
   position: relative;
-  padding-left: 1.6em;
-  margin-bottom: 0.5em;
+  padding-left: 2em; /* 增加左侧填充 */
+  margin-bottom: 14px; /* 增加列表项间距 */
+  text-align: left; /* 恢复左对齐文本 */
+  box-sizing: border-box; /* 确保padding不影响总宽度 */
+  display: block; /* 恢复块级显示 */
 }
 
 .card-content li::before {
   content: "✨";
   position: absolute;
   left: 0;
-  top: 0.1em;
+  top: 0.15em; /* 调整emoji位置 */
   font-size: 1.2em;
   font-weight: bold;
-  line-height: 1;
+  line-height: 1.5;
+  text-align: left; /* 确保emoji左对齐 */
+  width: 2em; /* 匹配左侧填充 */
 }
 
 /* 按钮样式 */
@@ -399,14 +479,26 @@ textarea {
 
 /* 卡片页脚 */
 .card-footer {
-  padding-top: 10px;
+  padding-top: 12px; /* 增加顶部内边距 */
+  margin-top: auto; /* 使用auto将页脚推到底部 */
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
   color: #666;
-  position: relative; /* 相对定位 */
-  z-index: 10; /* 确保页脚在最上层 */
+  position: relative; /* 改为相对定位 */
+  bottom: 0; /* 保持在底部 */
+  left: 0; /* 左侧对齐 */
+  right: 0; /* 右侧对齐 */
+  z-index: 50; /* 保持高z-index确保页脚在最上层 */
+  box-sizing: border-box; /* 确保padding包含在高度内 */
+  width: 100%; /* 占满宽度 */
+  margin-bottom: 0; /* 确保底部没有边距 */
+  flex-shrink: 0; /* 防止被压缩 */
+  background-color: var(--card-bg); /* 添加背景色，防止内容透过 */
+  padding-left: 10px; /* 与内容区域padding一致 */
+  padding-right: 15px; /* 与内容区域padding一致 */
+  padding-bottom: 10px; /* 底部内边距 */
 }
 
 .likes-comments {
@@ -754,16 +846,115 @@ textarea {
   display: none;
 }
 
-/* 导出模式下的样式 */
+/* 卡片内容在导出模式下的样式 */
 .export-mode .card-content {
   overflow: visible !important;
   max-height: none !important;
   height: auto !important;
+  display: block !important; /* 覆盖flex布局，以便导出正常显示 */
+  text-align: left !important; /* 恢复左对齐文本 */
+  padding: 0 !important; /* 重置内边距，防止内容溢出 */
+  word-break: break-word !important; /* 确保长单词不会溢出 */
+  max-width: 100% !important; /* 确保内容不超过容器宽度 */
+  position: relative !important; /* 确保位置正确 */
+  top: 0 !important; /* 从顶部开始 */
+  margin-bottom: 0 !important; /* 移除底部边距 */
+  flex: 1 !important; /* 填充剩余空间 */
+  padding-bottom: 0 !important; /* 移除底部内边距 */
 }
 
-/* 确保导出模式下内容包装器的padding不丢失 */
+/* 为card-footer在导出模式下添加特殊处理 */
+.export-mode .card-footer {
+  position: relative !important; /* 改回相对定位 */
+  bottom: 0 !important; /* 距离底部距离减小，使页脚更靠下 */
+  left: 0 !important; /* 左侧对齐内容区域 */
+  right: 0 !important; /* 右侧对齐内容区域 */
+  width: 100% !important; /* 宽度匹配内容区域 */
+  margin-top: auto !important; /* 自动顶部外边距，将页脚推到底部 */
+  padding-top: 12px !important; /* 确保顶部内边距 */
+  padding-bottom: 5px !important; /* 减小底部内边距 */
+  padding-left: 10px !important; /* 左侧内边距 */
+  padding-right: 15px !important; /* 右侧内边距 */
+  margin-bottom: 0 !important; /* 不要底部外边距 */
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important; /* 确保顶部边框 */
+  background-color: #ffffff !important; /* 使用纯白色背景 */
+  z-index: 50 !important; /* 确保在最上层 */
+}
+
+/* 确保导出模式下内容包装器的样式正确 */
 .export-mode .card-content-wrapper {
-  padding-bottom: 20px !important;
+  padding: 22px 22px 10px 22px !important; /* 修改内边距，底部添加少量内边距 */
+  background: #ffffff !important; /* 强制使用纯白色背景 */
+  background-color: #ffffff !important; /* 双重保证背景色 */
+  overflow: visible !important; /* 确保内容可见 */
+  min-height: auto !important; /* 自动最小高度，匹配内容 */
+  height: auto !important; /* 自动高度 */
+  width: calc(
+    var(--card-width) - 60px
+  ) !important; /* 使用与展示卡片一致的宽度 */
+  backdrop-filter: blur(10px) !important; /* 保持模糊效果 */
+  border: 1px solid rgba(255, 255, 255, 0.2) !important; /* 保持边框 */
+  margin: 0 auto !important; /* 居中显示 */
+  display: flex !important; /* 使用弹性布局 */
+  flex-direction: column !important; /* 垂直方向 */
+  position: relative !important; /* 添加相对定位，以便footer可以粘性定位 */
+  padding-bottom: 20px !important; /* 减小为footer留出的空间 */
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.03) inset !important; /* 添加内阴影 */
+  flex: 1 !important; /* 填充剩余空间 */
+}
+
+/* 为导出模式添加特殊处理，确保白色背景 */
+.export-mode .card {
+  background: #ffffff !important; /* 确保卡片背景为纯白色 */
+  width: var(--card-width) !important; /* 固定宽度 */
+  min-height: auto !important; /* 自动最小高度 */
+  max-height: none !important; /* 移除最大高度限制 */
+  height: auto !important; /* 自动高度，根据内容自适应 */
+  padding: 30px !important; /* 恢复与展示卡片一致的padding */
+  display: flex !important; /* 使用弹性布局 */
+  flex-direction: column !important; /* 垂直排列子元素 */
+  align-items: center !important; /* 水平居中 */
+}
+
+.export-mode .card-background {
+  opacity: 1 !important;
+  visibility: visible !important;
+  background-size: 200% 200% !important;
+  height: 100% !important; /* 确保背景覆盖整个卡片 */
+  bottom: 0 !important; /* 确保背景延伸到底部 */
+  z-index: 1 !important; /* 确保背景在内容之下 */
+  width: 100% !important; /* 宽度100% */
+}
+
+/* 修改导出模式下的卡片内容样式 */
+.export-mode .card-content {
+  overflow: visible !important;
+  max-height: none !important; /* 移除最大高度限制 */
+  height: auto !important;
+  display: block !important; /* 覆盖flex布局，以便导出正常显示 */
+  text-align: left !important; /* 恢复左对齐文本 */
+  padding: 0 !important; /* 重置内边距，防止内容溢出 */
+  word-break: break-word !important; /* 确保长单词不会溢出 */
+  max-width: 100% !important; /* 确保内容不超过容器宽度 */
+  position: relative !important; /* 确保位置正确 */
+  top: 0 !important; /* 从顶部开始 */
+  margin-bottom: 0 !important; /* 移除底部边距 */
+  flex: 1 !important; /* 填充剩余空间 */
+  padding-bottom: 0 !important; /* 移除底部内边距 */
+  width: 100% !important; /* 确保宽度100% */
+  margin-top: 0 !important; /* 移除顶部边距 */
+}
+
+/* 导出模式下的内容元素样式 */
+.export-mode .card-content p,
+.export-mode .card-content .custom-list-item,
+.export-mode .card-content li {
+  width: 100% !important;
+  max-width: 100% !important;
+  word-wrap: break-word !important; /* 确保文本折行 */
+  overflow-wrap: break-word !important;
+  box-sizing: border-box !important;
+  margin-bottom: 14px !important; /* 统一底部边距 */
 }
 
 /* 当内容可能需要滚动时的样式 */
@@ -771,18 +962,102 @@ textarea {
   overflow: auto; /* 允许滚动 */
   scrollbar-width: thin; /* Firefox样式 */
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent; /* Firefox样式 */
+  display: block; /* 覆盖flex布局，以便正常滚动 */
+  text-align: left; /* 恢复左对齐文本 */
+  padding-right: 12px; /* 为滚动条留出更多空间 */
+  padding-top: 3px; /* 添加少量顶部内边距 */
+  padding-bottom: 3px; /* 添加少量底部内边距 */
+  height: calc(var(--card-height) - 180px); /* 固定高度，留出标题和页脚空间 */
+  max-height: calc(var(--card-height) - 180px); /* 最大高度与高度一致 */
+}
+
+/* 确保滚动模式下内容包装器仍然保持固定高度和比例 */
+.scrollable .card-content-wrapper {
+  height: calc(var(--card-height) - 60px) !important; /* 固定高度 */
+  width: calc(var(--card-width) - 60px) !important; /* 固定宽度 */
+  display: flex;
+  flex-direction: column;
 }
 
 /* 自定义滚动条样式 */
 .scrollable .card-content::-webkit-scrollbar {
-  width: 4px;
+  width: 5px; /* 增加滚动条宽度 */
 }
 
 .scrollable .card-content::-webkit-scrollbar-track {
   background: transparent;
+  border-radius: 3px;
 }
 
 .scrollable .card-content::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.15); /* 稍微减淡滚动条颜色 */
   border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.scrollable .card-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.25); /* 悬停时加深颜色 */
+}
+
+/* 调整滚动模式下的内容布局 */
+.scrollable .card-content p,
+.scrollable .card-content .custom-list-item,
+.scrollable .card-content li {
+  margin-bottom: 14px; /* 稍微减小间距，适应滚动视图 */
+}
+
+.scrollable .card-content p:last-child,
+.scrollable .card-content .custom-list-item:last-child,
+.scrollable .card-content li:last-child {
+  margin-bottom: 8px; /* 保留一点底部间距 */
+}
+
+/* 添加对扩展高度卡片的样式支持 */
+.card[data-extended-height="true"] {
+  height: auto;
+  transition: height 0.3s ease;
+}
+
+.card[data-extended-height="true"] .card-content-wrapper {
+  height: auto;
+  min-height: calc(var(--card-height) - 60px);
+  max-height: calc(var(--card-height) * 1.2 - 60px);
+  transition: height 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.card[data-extended-height="true"] .card-background {
+  height: 100%;
+  bottom: 0;
+  background-size: cover;
+}
+
+.card[data-extended-height="true"] .card-content {
+  flex: 1; /* 填充剩余空间 */
+  margin-bottom: 20px; /* 为footer留出空间 */
+}
+
+/* 图片生成容器样式 */
+.image-generation-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  overflow: hidden;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .modal-container {
+    width: 95%;
+    padding: 20px;
+  }
+
+  .modal-preview .card {
+    transform: scale(0.7);
+  }
 }
